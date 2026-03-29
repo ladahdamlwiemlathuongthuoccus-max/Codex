@@ -1,0 +1,24 @@
+{
+  "_comment": "ПРОВЕРИТЬ: формат settings.json может отличаться от фактической схемы Claude Code. Сверить при Фазе 0 (верификация платформы) и скорректировать.",
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(operations/**)",
+      "Write(legal/**)",
+      "Write(finance/**)",
+      "Write(tax/**)",
+      "Write(memory/knowledge.jsonl)",
+      "Write(memory/backups/**)",
+      "Write(memory/archive/**)",
+      "Write(documents/comms/**)"
+    ],
+    "deny": [
+      "Write(CLAUDE.md)",
+      "Write(.claude/agents/**)",
+      "Write(.claude/skills/**)",
+      "Write(.claude/settings.json)",
+      "Write(documents/contracts/personal/**)",
+      "Delete(**)"
+    ]
+  }
+}

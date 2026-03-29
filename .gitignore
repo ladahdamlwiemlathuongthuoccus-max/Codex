@@ -1,0 +1,27 @@
+# Бизнес-данные и чувствительные документы
+DATA/
+documents/contracts/
+documents/contracts/personal/
+finance/
+legal/
+tax/
+
+# Память проекта (содержит факты, суммы, контакты)
+memory/
+
+# Операционные файлы (статусы, логи)
+operations/
+
+# Локальные настройки Claude Code
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Бэкапы (хранятся локально, не нужны в git)
+.claude/agents/backups/
+
+# PowerShell-скрипты с потенциально чувствительными путями
+backup_memory.ps1
+
+# Windows
+Thumbs.db
+desktop.ini
