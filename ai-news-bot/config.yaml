@@ -3,7 +3,7 @@ bot:
   timezone: "Europe/Moscow"
   fetch_interval_minutes: 45
   instant_threshold: 8
-  max_articles_per_digest: 20
+  max_articles_per_digest: 10
   language: "ru"
 
 llm:

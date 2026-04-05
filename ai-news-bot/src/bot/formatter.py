@@ -52,11 +52,12 @@ def format_digest(articles: list[dict], date_str: str) -> list[str]:
     if not articles:
         return ["Новых AI-новостей пока нет. Попробуйте позже."]
 
-    # Filter out noise (importance < 4)
-    articles = [a for a in articles if a.get("importance_score", 0) >= 4]
+    # Only significant news (importance >= 6)
+    articles = [a for a in articles if a.get("importance_score", 0) >= 6]
+    articles = articles[:10]  # top 10 max
 
     if not articles:
-        return ["Сегодня значимых новостей в AI не было."]
+        return ["Сегодня прорывных новостей в AI не было. Значимые обновления появятся в следующем дайджесте."]
 
     date_formatted = _date_ru(date_str)
     messages = []
