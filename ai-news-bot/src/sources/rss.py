@@ -42,6 +42,8 @@ class RSSFetcher(BaseFetcher):
         feed = feedparser.parse(resp.text)
         articles = []
 
+        is_reddit = "reddit.com" in source.get("url", "")
+
         for entry in feed.entries[:50]:
             title = entry.get("title", "").strip()
             if not title:
@@ -52,6 +54,13 @@ class RSSFetcher(BaseFetcher):
                 continue
 
             content = self._extract_content(entry)
+
+            # For Reddit: extract original external link from post
+            if is_reddit:
+                external = self._extract_reddit_external_url(entry)
+                if external:
+                    url = external
+
             published = self._parse_date(entry)
 
             articles.append(RawArticle(
@@ -65,6 +74,31 @@ class RSSFetcher(BaseFetcher):
 
         logger.info("Fetched %d articles from %s", len(articles), source["name"])
         return articles
+
+    @staticmethod
+    def _extract_reddit_external_url(entry) -> str | None:
+        """Extract the original external URL from a Reddit link post."""
+        import re
+        content_html = ""
+        if "content" in entry and entry.content:
+            content_html = entry.content[0].get("value", "")
+        elif "summary" in entry:
+            content_html = entry.get("summary", "")
+
+        if not content_html:
+            return None
+
+        # Reddit link posts have "[link]" pointing to external URL
+        match = re.search(
+            r'<a\s+href="(https?://[^"]+)"[^>]*>\s*\[link\]\s*</a>',
+            content_html,
+        )
+        if match:
+            link = match.group(1)
+            # Skip if the link points back to reddit itself
+            if "reddit.com" not in link and "redd.it" not in link:
+                return link
+        return None
 
     def _extract_content(self, entry) -> str:
         content = ""

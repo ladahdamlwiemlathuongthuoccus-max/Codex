@@ -63,6 +63,7 @@ class BotConfig:
     fetch_interval_minutes: int = 45
     instant_threshold: int = 8
     max_articles_per_digest: int = 20
+    max_instant_per_day: int = 1
     language: str = "ru"
 
 
@@ -89,6 +90,7 @@ def load_yaml_config(path: Path | None = None) -> AppConfig:
         fetch_interval_minutes=bot_raw.get("fetch_interval_minutes", 45),
         instant_threshold=bot_raw.get("instant_threshold", 8),
         max_articles_per_digest=bot_raw.get("max_articles_per_digest", 20),
+        max_instant_per_day=bot_raw.get("max_instant_per_day", 1),
         language=bot_raw.get("language", "ru"),
     )
 

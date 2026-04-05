@@ -22,6 +22,13 @@ SCRAPER_CONFIGS = {
         "link_selector": "a",
         "base_url": "https://www.deeplearning.ai",
     },
+    "Anthropic Blog": {
+        "article_selector": "a[href*='/research/'], a[href*='/news/'], a[href*='/engineering/']",
+        "title_selector": "h3, h2, span, div",
+        "link_selector": "",
+        "base_url": "https://www.anthropic.com",
+        "use_parent_as_link": True,
+    },
 }
 
 
@@ -57,20 +64,29 @@ class WebScraperFetcher(BaseFetcher):
         link_selector = config.get("link_selector", "a")
         base_url = config.get("base_url", "")
 
+        use_parent_as_link = config.get("use_parent_as_link", False)
+
         for el in soup.select(article_selector)[:20]:
-            title_el = el.select_one(title_selector)
-            if not title_el:
-                continue
-            title = title_el.get_text(strip=True)
+            title = ""
+            if title_selector:
+                title_el = el.select_one(title_selector)
+                if title_el:
+                    title = title_el.get_text(strip=True)
             if not title:
+                title = el.get_text(strip=True)[:120]
+            if not title or len(title) < 5:
                 continue
 
-            link_el = el.select_one(link_selector)
             url = ""
-            if link_el and link_el.get("href"):
-                url = link_el["href"]
-                if url.startswith("/"):
-                    url = base_url + url
+            if use_parent_as_link and el.name == "a" and el.get("href"):
+                url = el["href"]
+            elif link_selector:
+                link_el = el.select_one(link_selector)
+                if link_el and link_el.get("href"):
+                    url = link_el["href"]
+
+            if url and url.startswith("/"):
+                url = base_url + url
 
             content = el.get_text(separator=" ", strip=True)[:3000]
 

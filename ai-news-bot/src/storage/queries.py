@@ -197,11 +197,32 @@ async def get_active_subscribers(db: Database) -> list[dict]:
     return [dict(row) for row in await cursor.fetchall()]
 
 
-async def get_instant_subscribers(db: Database) -> list[dict]:
-    cursor = await db.conn.execute(
-        "SELECT * FROM subscribers WHERE is_active = 1 AND instant_enabled = 1"
-    )
+async def get_instant_subscribers(db: Database, max_per_day: int = 0) -> list[dict]:
+    if max_per_day > 0:
+        cursor = await db.conn.execute(
+            """SELECT * FROM subscribers
+               WHERE is_active = 1 AND instant_enabled = 1
+                 AND instant_count_today < ?""",
+            (max_per_day,),
+        )
+    else:
+        cursor = await db.conn.execute(
+            "SELECT * FROM subscribers WHERE is_active = 1 AND instant_enabled = 1"
+        )
     return [dict(row) for row in await cursor.fetchall()]
+
+
+async def increment_instant_count(db: Database, telegram_id: int) -> None:
+    await db.conn.execute(
+        "UPDATE subscribers SET instant_count_today = instant_count_today + 1 WHERE telegram_id = ?",
+        (telegram_id,),
+    )
+    await db.conn.commit()
+
+
+async def reset_instant_counts(db: Database) -> None:
+    await db.conn.execute("UPDATE subscribers SET instant_count_today = 0")
+    await db.conn.commit()
 
 
 async def get_digest_subscribers(db: Database) -> list[dict]:

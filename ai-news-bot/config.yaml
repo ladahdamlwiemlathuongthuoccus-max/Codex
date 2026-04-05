@@ -4,6 +4,7 @@ bot:
   fetch_interval_minutes: 45
   instant_threshold: 8
   max_articles_per_digest: 10
+  max_instant_per_day: 2
   language: "ru"
 
 llm:
@@ -94,10 +95,10 @@ sources:
       url: "https://www.deeplearning.ai/the-batch/"
       feed_type: "web_scraper"
       priority: "medium"
-    - name: "TLDR AI"
-      url: "https://tldr.tech/ai/rss"
+    - name: "MIT Tech Review AI"
+      url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"
       feed_type: "rss"
-      priority: "low"
+      priority: "medium"
     - name: "Import AI"
       url: "https://importai.substack.com/feed"
       feed_type: "rss"
@@ -105,26 +106,26 @@ sources:
 
   arxiv:
     - name: "arxiv cs.AI"
-      url: "http://export.arxiv.org/rss/cs.AI"
+      url: "https://rss.arxiv.org/rss/cs.AI"
       feed_type: "rss"
       priority: "medium"
     - name: "arxiv cs.CL"
-      url: "http://export.arxiv.org/rss/cs.CL"
+      url: "https://rss.arxiv.org/rss/cs.CL"
       feed_type: "rss"
       priority: "medium"
     - name: "arxiv cs.LG"
-      url: "http://export.arxiv.org/rss/cs.LG"
+      url: "https://rss.arxiv.org/rss/cs.LG"
       feed_type: "rss"
       priority: "medium"
 
   blogs:
     - name: "OpenAI Blog"
-      url: "https://openai.com/blog/rss.xml"
+      url: "https://openai.com/news/rss.xml"
       feed_type: "rss"
       priority: "high"
     - name: "Anthropic Blog"
-      url: "https://www.anthropic.com/research/rss.xml"
-      feed_type: "rss"
+      url: "https://www.anthropic.com/news"
+      feed_type: "web_scraper"
       priority: "high"
     - name: "Google DeepMind Blog"
       url: "https://deepmind.google/blog/rss.xml"

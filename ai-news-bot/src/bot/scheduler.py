@@ -64,7 +64,7 @@ def setup_scheduler(
         hour=0,
         minute=0,
         id="reset_counters",
-        kwargs={"llm": llm},
+        kwargs={"llm": llm, "db": db},
     )
 
     return scheduler
@@ -80,25 +80,36 @@ async def _fetch_and_dispatch(
         result = await pipeline.run_fetch_cycle()
         logger.info("Fetch cycle completed: %s", result)
 
-        # Dispatch instant notifications
+        # Dispatch instant notifications (respecting daily limit)
         threshold = config.bot.instant_threshold
+        max_instant = config.bot.max_instant_per_day
         urgent = await queries.get_unsent_instant(db, threshold)
 
         if urgent:
-            subscribers = await queries.get_instant_subscribers(db)
+            # Track sent count per subscriber in memory to enforce limit
+            sent_count: dict[int, int] = {}
+            subscribers = await queries.get_instant_subscribers(db, max_per_day=max_instant)
+            for sub in subscribers:
+                sent_count[sub["telegram_id"]] = sub.get("instant_count_today", 0)
+
             for article in urgent:
                 text = format_instant(article)
                 for sub in subscribers:
+                    tid = sub["telegram_id"]
+                    if sent_count.get(tid, 0) >= max_instant:
+                        continue
                     if _matches_filter(article, sub):
                         try:
                             await bot.send_message(
-                                sub["telegram_id"],
+                                tid,
                                 text,
                                 parse_mode="HTML",
                                 disable_web_page_preview=True,
                             )
+                            sent_count[tid] = sent_count.get(tid, 0) + 1
+                            await queries.increment_instant_count(db, tid)
                         except Exception as e:
-                            logger.warning("Failed to send to %s: %s", sub["telegram_id"], e)
+                            logger.warning("Failed to send to %s: %s", tid, e)
                 await queries.mark_sent_instant(db, article["id"])
 
     except Exception as e:
@@ -153,9 +164,10 @@ async def _cleanup(db: Database) -> None:
         logger.error("Cleanup error: %s", e)
 
 
-async def _reset_counters(llm: LLMProcessor) -> None:
+async def _reset_counters(llm: LLMProcessor, db: Database) -> None:
     llm.reset_daily_counter()
-    logger.info("Daily LLM counter reset")
+    await queries.reset_instant_counts(db)
+    logger.info("Daily LLM and instant counters reset")
 
 
 def _matches_filter(article: dict, subscriber: dict) -> bool:

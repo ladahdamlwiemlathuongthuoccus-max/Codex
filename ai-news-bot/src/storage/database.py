@@ -46,6 +46,14 @@ class Database:
             except Exception:
                 pass  # column already exists
 
+        if current < 3:
+            try:
+                await self._conn.execute(
+                    "ALTER TABLE subscribers ADD COLUMN instant_count_today INTEGER DEFAULT 0"
+                )
+            except Exception:
+                pass  # column already exists
+
         if current < SCHEMA_VERSION:
             await self._conn.execute(
                 "INSERT OR REPLACE INTO schema_version (version) VALUES (?)",

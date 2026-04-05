@@ -1,5 +1,4 @@
 {
-  "_comment": "ПРОВЕРИТЬ: формат settings.json может отличаться от фактической схемы Claude Code. Сверить при Фазе 0 (верификация платформы) и скорректировать.",
   "permissions": {
     "allow": [
       "Read(**)",
@@ -19,6 +18,83 @@
       "Write(.claude/settings.json)",
       "Write(documents/contracts/personal/**)",
       "Delete(**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/safety-guard.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/session-log.py"
+          },
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/lint-check.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/vault-context.py"
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/context-recovery.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/verification-gate.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/subagent-context.py"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python D:/REDPEAK/AgentHQ/.claude/hooks/prompt-enricher.py"
+          }
+        ]
+      }
     ]
   }
 }

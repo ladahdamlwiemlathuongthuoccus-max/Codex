@@ -1,4 +1,4 @@
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
     digest_time TEXT DEFAULT '09:00',
     subscribed_at TEXT NOT NULL DEFAULT (datetime('now')),
     last_digest_at TEXT,
+    instant_count_today INTEGER DEFAULT 0,
     is_active INTEGER DEFAULT 1
 );
 """
