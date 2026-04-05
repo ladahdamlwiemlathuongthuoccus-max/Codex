@@ -22,6 +22,11 @@ operations/
 # PowerShell-скрипты с потенциально чувствительными путями
 backup_memory.ps1
 
+# AI News Bot runtime data
+ai-news-bot/data/
+ai-news-bot/.env
+ai-news-bot/.venv/
+
 # Windows
 Thumbs.db
 desktop.ini

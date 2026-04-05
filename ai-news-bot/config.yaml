@@ -1,0 +1,136 @@
+bot:
+  digest_time: "09:00"
+  timezone: "Europe/Moscow"
+  fetch_interval_minutes: 45
+  instant_threshold: 8
+  max_articles_per_digest: 20
+  language: "ru"
+
+llm:
+  summarize_model: "qwen/qwen3.6-plus:free"
+  digest_model: "qwen/qwen3.6-plus:free"
+  max_tokens_summarize: 1024
+  max_tokens_digest: 4096
+  batch_size: 5
+  max_daily_calls: 200
+
+tags:
+  - id: "agentic"
+    label: "Агентные системы"
+    keywords: ["agent", "agentic", "tool use", "function calling", "multi-agent", "orchestration"]
+  - id: "llm_engineering"
+    label: "LLM-инженерия"
+    keywords: ["fine-tuning", "RAG", "prompt engineering", "inference", "training", "distillation"]
+  - id: "models"
+    label: "Модели и архитектуры"
+    keywords: ["GPT", "Claude", "Gemini", "Llama", "transformer", "diffusion", "SOTA", "benchmark"]
+  - id: "research"
+    label: "Исследования"
+    keywords: ["paper", "arxiv", "study", "breakthrough", "NeurIPS", "ICML", "ICLR"]
+  - id: "products"
+    label: "Продукты и релизы"
+    keywords: ["launch", "release", "API", "product", "startup", "demo", "pricing"]
+  - id: "open_source"
+    label: "Open Source"
+    keywords: ["open source", "GitHub", "weights", "Hugging Face", "community", "license"]
+  - id: "safety"
+    label: "Безопасность AI"
+    keywords: ["alignment", "safety", "regulation", "governance", "bias", "ethics", "policy"]
+  - id: "mcp_a2a"
+    label: "MCP / A2A"
+    keywords: ["model context protocol", "MCP", "A2A", "agent-to-agent", "tool server"]
+  - id: "sapr_ai"
+    label: "САПР + AI"
+    keywords: ["CAD", "CAE", "BIM", "engineering", "design automation", "generative design"]
+  - id: "business"
+    label: "AI в бизнесе"
+    keywords: ["funding", "valuation", "acquisition", "enterprise", "deployment", "ROI"]
+
+scoring:
+  source_priority:
+    high: 3    # Anthropic, OpenAI, DeepMind blogs
+    medium: 2  # arxiv, HuggingFace, major tech
+    low: 1     # Reddit, newsletters
+  recency:
+    fresh_hours: 6
+    fresh_bonus: 2
+    recent_hours: 24
+    recent_bonus: 1
+  multi_source_threshold: 3
+  multi_source_bonus: 2
+  max_per_source_in_digest: 3
+
+sources:
+  reddit:
+    - name: "r/MachineLearning"
+      url: "https://www.reddit.com/r/MachineLearning/.rss"
+      feed_type: "rss"
+      priority: "low"
+    - name: "r/artificial"
+      url: "https://www.reddit.com/r/artificial/.rss"
+      feed_type: "rss"
+      priority: "low"
+    - name: "r/LocalLLaMA"
+      url: "https://www.reddit.com/r/LocalLLaMA/.rss"
+      feed_type: "rss"
+      priority: "low"
+
+  twitter:
+    - name: "@AndrewYNg"
+      url: "https://nitter.net/AndrewYNg/rss"
+      feed_type: "nitter"
+      priority: "medium"
+    - name: "@RichardSocher"
+      url: "https://nitter.net/RichardSocher/rss"
+      feed_type: "nitter"
+      priority: "medium"
+    - name: "@ylecun"
+      url: "https://nitter.net/ylecun/rss"
+      feed_type: "nitter"
+      priority: "medium"
+
+  newsletters:
+    - name: "The Batch"
+      url: "https://www.deeplearning.ai/the-batch/"
+      feed_type: "web_scraper"
+      priority: "medium"
+    - name: "TLDR AI"
+      url: "https://tldr.tech/ai/rss"
+      feed_type: "rss"
+      priority: "low"
+    - name: "Import AI"
+      url: "https://importai.substack.com/feed"
+      feed_type: "rss"
+      priority: "medium"
+
+  arxiv:
+    - name: "arxiv cs.AI"
+      url: "http://export.arxiv.org/rss/cs.AI"
+      feed_type: "rss"
+      priority: "medium"
+    - name: "arxiv cs.CL"
+      url: "http://export.arxiv.org/rss/cs.CL"
+      feed_type: "rss"
+      priority: "medium"
+    - name: "arxiv cs.LG"
+      url: "http://export.arxiv.org/rss/cs.LG"
+      feed_type: "rss"
+      priority: "medium"
+
+  blogs:
+    - name: "OpenAI Blog"
+      url: "https://openai.com/blog/rss.xml"
+      feed_type: "rss"
+      priority: "high"
+    - name: "Anthropic Blog"
+      url: "https://www.anthropic.com/research/rss.xml"
+      feed_type: "rss"
+      priority: "high"
+    - name: "Google DeepMind Blog"
+      url: "https://deepmind.google/blog/rss.xml"
+      feed_type: "rss"
+      priority: "high"
+    - name: "Hugging Face Blog"
+      url: "https://huggingface.co/blog/feed.xml"
+      feed_type: "rss"
+      priority: "medium"
