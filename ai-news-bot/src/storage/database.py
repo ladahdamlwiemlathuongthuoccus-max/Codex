@@ -25,10 +25,17 @@ class Database:
         return db
 
     async def _connect(self) -> None:
-        self._conn = await aiosqlite.connect(self._db_path)
+        self._conn = await aiosqlite.connect(self._db_path, timeout=30)
         self._conn.row_factory = aiosqlite.Row
         await self._conn.execute("PRAGMA journal_mode=WAL")
         await self._conn.execute("PRAGMA foreign_keys=ON")
+        await self._conn.execute("PRAGMA busy_timeout=5000")
+
+    async def _column_exists(self, table: str, column: str) -> bool:
+        assert self._conn is not None
+        cursor = await self._conn.execute(f"PRAGMA table_info({table})")
+        rows = await cursor.fetchall()
+        return any(row[1] == column for row in rows)
 
     async def _run_migrations(self) -> None:
         assert self._conn is not None
@@ -41,18 +48,23 @@ class Database:
         current = row["v"] if row and row["v"] else 0
 
         if current < 2:
-            try:
+            if not await self._column_exists("articles", "title_ru"):
                 await self._conn.execute("ALTER TABLE articles ADD COLUMN title_ru TEXT")
-            except Exception:
-                pass  # column already exists
+                logger.info("Migration v2: added articles.title_ru")
 
         if current < 3:
-            try:
+            if not await self._column_exists("subscribers", "instant_count_today"):
                 await self._conn.execute(
                     "ALTER TABLE subscribers ADD COLUMN instant_count_today INTEGER DEFAULT 0"
                 )
-            except Exception:
-                pass  # column already exists
+                logger.info("Migration v3: added subscribers.instant_count_today")
+
+        if current < 4:
+            if not await self._column_exists("articles", "llm_fail_count"):
+                await self._conn.execute(
+                    "ALTER TABLE articles ADD COLUMN llm_fail_count INTEGER DEFAULT 0"
+                )
+                logger.info("Migration v4: added articles.llm_fail_count")
 
         if current < SCHEMA_VERSION:
             await self._conn.execute(

@@ -17,6 +17,22 @@ from .formatter import format_digest, format_instant
 
 logger = logging.getLogger(__name__)
 
+_ALERT_THRESHOLD = 3
+_failure_counts: dict[str, int] = {}
+
+
+async def _alert_admin(bot: Bot, admin_id: int, job_name: str, error: Exception) -> None:
+    count = _failure_counts.get(job_name, 0)
+    if count >= _ALERT_THRESHOLD and count % _ALERT_THRESHOLD == 0:
+        try:
+            await bot.send_message(
+                admin_id,
+                f"ALERT: {job_name} failed {count} times consecutively.\n"
+                f"Last error: {str(error)[:200]}",
+            )
+        except Exception as e:
+            logger.error("Failed to send admin alert: %s", e)
+
 
 def setup_scheduler(
     db: Database,
@@ -24,8 +40,11 @@ def setup_scheduler(
     pipeline: Pipeline,
     llm: LLMProcessor,
     config: AppConfig,
+    admin_id: int = 0,
 ) -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=config.bot.timezone)
+
+    common_kwargs = {"db": db, "bot": bot, "admin_id": admin_id}
 
     # Fetch cycle
     scheduler.add_job(
@@ -33,7 +52,7 @@ def setup_scheduler(
         "interval",
         minutes=config.bot.fetch_interval_minutes,
         id="fetch_cycle",
-        kwargs={"db": db, "bot": bot, "pipeline": pipeline, "config": config},
+        kwargs={**common_kwargs, "pipeline": pipeline, "config": config},
     )
 
     # Daily digest
@@ -44,7 +63,7 @@ def setup_scheduler(
         hour=hour,
         minute=minute,
         id="daily_digest",
-        kwargs={"db": db, "bot": bot, "llm": llm, "config": config},
+        kwargs={**common_kwargs, "llm": llm, "config": config},
     )
 
     # Cleanup old articles
@@ -67,6 +86,15 @@ def setup_scheduler(
         kwargs={"llm": llm, "db": db},
     )
 
+    # Health check every 2 hours
+    scheduler.add_job(
+        _health_check,
+        "interval",
+        hours=2,
+        id="health_check",
+        kwargs=common_kwargs,
+    )
+
     return scheduler
 
 
@@ -75,10 +103,12 @@ async def _fetch_and_dispatch(
     bot: Bot,
     pipeline: Pipeline,
     config: AppConfig,
+    admin_id: int = 0,
 ) -> None:
     try:
         result = await pipeline.run_fetch_cycle()
         logger.info("Fetch cycle completed: %s", result)
+        _failure_counts["fetch_and_dispatch"] = 0
 
         # Dispatch instant notifications (respecting daily limit)
         threshold = config.bot.instant_threshold
@@ -114,6 +144,9 @@ async def _fetch_and_dispatch(
 
     except Exception as e:
         logger.error("Fetch and dispatch error: %s", e)
+        _failure_counts["fetch_and_dispatch"] = _failure_counts.get("fetch_and_dispatch", 0) + 1
+        if admin_id:
+            await _alert_admin(bot, admin_id, "fetch_and_dispatch", e)
 
 
 async def _send_daily_digest(
@@ -121,6 +154,7 @@ async def _send_daily_digest(
     bot: Bot,
     llm: LLMProcessor,
     config: AppConfig,
+    admin_id: int = 0,
 ) -> None:
     try:
         articles = await queries.get_digest_articles(
@@ -150,9 +184,13 @@ async def _send_daily_digest(
         article_ids = [a["id"] for a in articles]
         await queries.mark_sent_digest(db, article_ids)
         logger.info("Daily digest sent to %d subscribers (%d articles)", len(subscribers), len(articles))
+        _failure_counts["daily_digest"] = 0
 
     except Exception as e:
         logger.error("Daily digest error: %s", e)
+        _failure_counts["daily_digest"] = _failure_counts.get("daily_digest", 0) + 1
+        if admin_id:
+            await _alert_admin(bot, admin_id, "daily_digest", e)
 
 
 async def _cleanup(db: Database) -> None:
@@ -168,6 +206,36 @@ async def _reset_counters(llm: LLMProcessor, db: Database) -> None:
     llm.reset_daily_counter()
     await queries.reset_instant_counts(db)
     logger.info("Daily LLM and instant counters reset")
+
+
+async def _health_check(db: Database, bot: Bot, admin_id: int = 0) -> None:
+    try:
+        health = await queries.get_health_status(db)
+        issues = []
+
+        if health["stuck_articles"] > 0:
+            issues.append(f"Зависших статей (>6ч): {health['stuck_articles']}")
+        if health["stale_sources"] > 0:
+            issues.append(f"Источников без фетча (>3ч): {health['stale_sources']}")
+        if health["error_sources"] > 0:
+            issues.append(f"Источников с ошибками: {health['error_sources']}")
+        if health["llm_failed"] > 5:
+            issues.append(f"LLM-failed статей: {health['llm_failed']}")
+
+        if issues and admin_id:
+            text = "HEALTH CHECK:\n" + "\n".join(f"  {i}" for i in issues)
+            try:
+                await bot.send_message(admin_id, text)
+            except Exception as e:
+                logger.error("Failed to send health check: %s", e)
+
+        logger.info(
+            "Health: unprocessed=%d stuck=%d stale_sources=%d errors=%d processed_24h=%d",
+            health["unprocessed"], health["stuck_articles"],
+            health["stale_sources"], health["error_sources"], health["processed_24h"],
+        )
+    except Exception as e:
+        logger.error("Health check error: %s", e)
 
 
 def _matches_filter(article: dict, subscriber: dict) -> bool:

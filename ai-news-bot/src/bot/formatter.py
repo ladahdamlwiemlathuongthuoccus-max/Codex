@@ -36,10 +36,10 @@ MONTHS_RU = {
 }
 
 MAX_MESSAGE_LEN = 4000
+MAX_DIGEST_ARTICLES = 5
 
 
 def _date_ru(date_str: str) -> str:
-    """Convert date to Russian format."""
     from datetime import datetime
     try:
         dt = datetime.strptime(date_str, "%d %B %Y")
@@ -52,94 +52,93 @@ def format_digest(articles: list[dict], date_str: str) -> list[str]:
     if not articles:
         return ["Новых AI-новостей пока нет. Попробуйте позже."]
 
-    # Only significant news (importance >= 6)
+    # Only significant news (importance >= 6), top 5
     articles = [a for a in articles if a.get("importance_score", 0) >= 6]
-    articles = articles[:10]  # top 10 max
+    articles = articles[:MAX_DIGEST_ARTICLES]
 
     if not articles:
-        return ["Сегодня прорывных новостей в AI не было. Значимые обновления появятся в следующем дайджесте."]
+        return ["Сегодня значимых новостей в AI не было."]
 
     date_formatted = _date_ru(date_str)
-    messages = []
-    current = f"📡 <b>AI-дайджест</b>  |  {escape(date_formatted)}\n"
 
-    # Split by importance
-    important = [a for a in articles if a.get("importance_score", 0) >= 8]
-    regular = [a for a in articles if 4 <= a.get("importance_score", 0) < 8]
+    # Header
+    lines = [f"📡 <b>AI-дайджест</b>  |  {escape(date_formatted)}\n"]
 
-    # IMPORTANT section
-    if important:
-        current += "\n🔥 <b>Главное</b>\n"
-        for article in important:
-            current += "\n" + _format_card(article) + "\n"
+    # Numbered compact cards
+    for i, article in enumerate(articles, 1):
+        lines.append(_format_compact_card(i, article))
 
-    # Regular grouped by tag
-    tag_groups: dict[str, list[dict]] = {}
-    for article in regular:
-        tags = _parse_tags(article.get("tags", "[]"))
-        first_tag = tags[0] if tags else "other"
-        tag_groups.setdefault(first_tag, []).append(article)
-
-    sorted_groups = sorted(
-        tag_groups.items(),
-        key=lambda x: sum(a.get("importance_score", 0) for a in x[1]),
-        reverse=True,
-    )
-
-    for tag_id, group in sorted_groups:
-        emoji = TAG_EMOJI.get(tag_id, "📌")
-        label = TAG_LABELS.get(tag_id, "Разное")
-        section = f"\n{emoji} <b>{escape(label)}</b>\n"
-        for article in group:
-            section += "\n" + _format_card(article) + "\n"
-
-        if len(current) + len(section) > MAX_MESSAGE_LEN:
-            messages.append(current)
-            current = section
-        else:
-            current += section
-
-    total = len(important) + len(regular)
+    # Footer
     sources = set(a.get("source_name", "") for a in articles)
-    footer = f"\n{'~' * 28}\n📊 {total} новостей  |  {len(sources)} источников"
+    lines.append(f"\n{len(articles)} новостей из {len(sources)} источников")
 
-    if len(current) + len(footer) > MAX_MESSAGE_LEN:
-        messages.append(current)
-        messages.append(footer)
-    else:
-        current += footer
-        messages.append(current)
+    text = "\n".join(lines)
 
-    return messages
+    # Split if too long
+    if len(text) <= MAX_MESSAGE_LEN:
+        return [text]
+
+    return _split_messages(lines)
+
+
+def _format_compact_card(num: int, article: dict) -> str:
+    """Compact card: number, emoji, title as link, one-line summary."""
+    title = escape(_get_title_ru(article))
+    url = escape(article.get("url", ""))
+    source = escape(article.get("source_name", ""))
+
+    tags = _parse_tags(article.get("tags", "[]"))
+    emoji = TAG_EMOJI.get(tags[0], "📌") if tags else "📌"
+
+    # Summary: first sentence only, trim to 120 chars
+    summary = article.get("summary_ru", "")
+    if "\n" in summary:
+        summary = summary.split("\n")[0]
+    if len(summary) > 140:
+        summary = summary[:137] + "..."
+    summary = escape(summary)
+
+    return (
+        f"\n{emoji} <b>{num}. <a href=\"{url}\">{title}</a></b>\n"
+        f"{summary}\n"
+        f"<i>{source}</i>"
+    )
 
 
 def format_instant(article: dict) -> str:
     title = escape(_get_title_ru(article))
-    summary = escape(article.get("summary_ru", ""))
-    source = escape(article.get("source_name", ""))
     url = escape(article.get("url", ""))
+    source = escape(article.get("source_name", ""))
+
     tags = _parse_tags(article.get("tags", "[]"))
-    tag_line = " ".join(TAG_EMOJI.get(t, "") for t in tags)
+    emoji = TAG_EMOJI.get(tags[0], "🔥") if tags else "🔥"
+
+    # Summary: first sentence only
+    summary = article.get("summary_ru", "")
+    if "\n" in summary:
+        summary = summary.split("\n")[0]
+    summary = escape(summary)
 
     return (
-        f"🔥 <b>{title}</b>\n\n"
+        f"{emoji} <b>{title}</b>\n\n"
         f"{summary}\n\n"
-        f"{tag_line}  {source}\n"
-        f"<a href=\"{url}\">Читать</a>"
+        f"<a href=\"{url}\">{source}</a>"
     )
 
 
-def _format_card(article: dict) -> str:
-    title = escape(_get_title_ru(article))
-    summary = escape(article.get("summary_ru", ""))
-    url = escape(article.get("url", ""))
-    source = escape(article.get("source_name", ""))
-
-    return (
-        f"<b>{title}</b>\n"
-        f"{summary}\n"
-        f"<a href=\"{url}\">~ {source}</a>"
-    )
+def _split_messages(lines: list[str]) -> list[str]:
+    messages = []
+    current = ""
+    for line in lines:
+        if len(current) + len(line) + 1 > MAX_MESSAGE_LEN:
+            if current:
+                messages.append(current)
+            current = line
+        else:
+            current = current + "\n" + line if current else line
+    if current:
+        messages.append(current)
+    return messages
 
 
 def _get_title_ru(article: dict) -> str:

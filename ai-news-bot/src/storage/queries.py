@@ -57,20 +57,18 @@ async def insert_article(
     importance_score: int = 5,
     published_at: str | None = None,
 ) -> int | None:
-    try:
-        cursor = await db.conn.execute(
-            """INSERT INTO articles
-               (url, url_normalized, content_hash, title, content_raw,
-                source_id, source_name, importance_score, published_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (url, url_normalized, content_hash, title, content_raw,
-             source_id, source_name, importance_score, published_at),
-        )
-        await db.conn.commit()
+    cursor = await db.conn.execute(
+        """INSERT OR IGNORE INTO articles
+           (url, url_normalized, content_hash, title, content_raw,
+            source_id, source_name, importance_score, published_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (url, url_normalized, content_hash, title, content_raw,
+         source_id, source_name, importance_score, published_at),
+    )
+    await db.conn.commit()
+    if cursor.rowcount > 0:
         return cursor.lastrowid
-    except Exception:
-        logger.debug("Duplicate article skipped: %s", url_normalized)
-        return None
+    return None
 
 
 async def get_unprocessed_articles(db: Database, limit: int = 50) -> list[dict]:
@@ -339,3 +337,83 @@ async def cleanup_old_articles(db: Database, days: int = 30) -> int:
     )
     await db.conn.commit()
     return cursor.rowcount
+
+
+async def increment_llm_fail(db: Database, article_id: int) -> int:
+    await db.conn.execute(
+        "UPDATE articles SET llm_fail_count = COALESCE(llm_fail_count, 0) + 1 WHERE id = ?",
+        (article_id,),
+    )
+    await db.conn.commit()
+    cursor = await db.conn.execute(
+        "SELECT llm_fail_count FROM articles WHERE id = ?", (article_id,),
+    )
+    row = await cursor.fetchone()
+    return row["llm_fail_count"] if row else 0
+
+
+async def mark_article_llm_failed(db: Database, article_id: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.conn.execute(
+        """UPDATE articles
+           SET summary_ru = '[Не удалось обработать]', tags = '[]',
+               importance_score = 1, processed_at = ?
+           WHERE id = ?""",
+        (now, article_id),
+    )
+    await db.conn.commit()
+
+
+async def get_health_status(db: Database) -> dict:
+    result = {}
+
+    # Stuck articles (unprocessed > 6 hours)
+    cursor = await db.conn.execute(
+        """SELECT COUNT(*) as c FROM articles
+           WHERE processed_at IS NULL
+             AND fetched_at < datetime('now', '-6 hours')"""
+    )
+    result["stuck_articles"] = (await cursor.fetchone())["c"]
+
+    # Unprocessed total
+    cursor = await db.conn.execute(
+        "SELECT COUNT(*) as c FROM articles WHERE processed_at IS NULL"
+    )
+    result["unprocessed"] = (await cursor.fetchone())["c"]
+
+    # Sources not fetched in 3 hours
+    cursor = await db.conn.execute(
+        """SELECT COUNT(*) as c FROM sources
+           WHERE is_active = 1
+             AND (last_fetched_at IS NULL OR last_fetched_at < datetime('now', '-3 hours'))"""
+    )
+    result["stale_sources"] = (await cursor.fetchone())["c"]
+
+    # Sources with errors
+    cursor = await db.conn.execute(
+        "SELECT COUNT(*) as c FROM sources WHERE error_count > 0"
+    )
+    result["error_sources"] = (await cursor.fetchone())["c"]
+
+    # Articles processed last 24h
+    cursor = await db.conn.execute(
+        """SELECT COUNT(*) as c FROM articles
+           WHERE processed_at IS NOT NULL
+             AND processed_at >= datetime('now', '-24 hours')"""
+    )
+    result["processed_24h"] = (await cursor.fetchone())["c"]
+
+    # Last fetch time
+    cursor = await db.conn.execute(
+        "SELECT MAX(last_fetched_at) as t FROM sources"
+    )
+    row = await cursor.fetchone()
+    result["last_fetch"] = row["t"] if row else None
+
+    # LLM failed articles
+    cursor = await db.conn.execute(
+        "SELECT COUNT(*) as c FROM articles WHERE llm_fail_count >= 3"
+    )
+    result["llm_failed"] = (await cursor.fetchone())["c"]
+
+    return result

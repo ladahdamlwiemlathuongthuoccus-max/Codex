@@ -32,6 +32,9 @@ SCRAPER_CONFIGS = {
 }
 
 
+MAX_RESPONSE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
 class WebScraperFetcher(BaseFetcher):
     def __init__(self):
         self._client: httpx.AsyncClient | None = None
@@ -42,6 +45,7 @@ class WebScraperFetcher(BaseFetcher):
                 timeout=30.0,
                 headers={"User-Agent": USER_AGENT},
                 follow_redirects=True,
+                max_redirects=5,
             )
         return self._client
 
@@ -52,6 +56,9 @@ class WebScraperFetcher(BaseFetcher):
         try:
             resp = await client.get(source["url"])
             resp.raise_for_status()
+            if len(resp.content) > MAX_RESPONSE_SIZE:
+                logger.warning("Response too large for %s: %d bytes", source["name"], len(resp.content))
+                return []
         except httpx.HTTPError as e:
             logger.warning("Failed to scrape %s: %s", source["name"], e)
             return []

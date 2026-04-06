@@ -19,26 +19,47 @@ NITTER_MIRRORS = [
 
 
 class NitterFetcher(RSSFetcher):
+    _working_mirrors: dict[str, str] = {}
+
     async def fetch(self, source: dict) -> list[RawArticle]:
         original_url = source["url"]
+        source_name = source["name"]
 
+        # Try cached working mirror first
+        cached = self._working_mirrors.get(source_name)
+        if cached:
+            url = self._replace_mirror(original_url, cached)
+            source_copy = {**source, "url": url}
+            try:
+                articles = await super().fetch(source_copy)
+                if articles:
+                    for article in articles:
+                        article.url = self._to_official_url(article.url)
+                    return articles
+            except Exception:
+                logger.debug("Cached mirror %s failed for %s", cached, source_name)
+                del self._working_mirrors[source_name]
+
+        # Try all mirrors
         for mirror in NITTER_MIRRORS:
+            if mirror == cached:
+                continue
             url = self._replace_mirror(original_url, mirror)
             source_copy = {**source, "url": url}
 
             try:
                 articles = await super().fetch(source_copy)
                 if articles:
-                    logger.info("Nitter mirror %s works for %s", mirror, source["name"])
-                    # Convert nitter URLs to official x.com URLs
+                    logger.info("Nitter mirror %s works for %s", mirror, source_name)
+                    self._working_mirrors[source_name] = mirror
                     for article in articles:
                         article.url = self._to_official_url(article.url)
                     return articles
             except Exception as e:
-                logger.debug("Nitter mirror %s failed for %s: %s", mirror, source["name"], e)
+                logger.debug("Nitter mirror %s failed for %s: %s", mirror, source_name, e)
                 continue
 
-        logger.warning("All Nitter mirrors failed for %s", source["name"])
+        logger.warning("All Nitter mirrors failed for %s", source_name)
         return []
 
     def _replace_mirror(self, url: str, mirror: str) -> str:

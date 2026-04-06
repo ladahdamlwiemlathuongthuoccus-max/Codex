@@ -1,4 +1,4 @@
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS articles (
     processed_at TEXT,
     sent_digest INTEGER DEFAULT 0,
     sent_instant INTEGER DEFAULT 0,
+    llm_fail_count INTEGER DEFAULT 0,
     UNIQUE(url_normalized)
 );
 

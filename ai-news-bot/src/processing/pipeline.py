@@ -9,11 +9,13 @@ from ..sources.nitter import NitterFetcher
 from ..sources.web_scraper import WebScraperFetcher
 from ..storage.database import Database
 from ..storage import queries
-from ..processing.dedup import normalize_url, compute_content_hash, jaccard_similarity
+from ..processing.dedup import normalize_url, compute_content_hash
 from ..processing.scorer import compute_score
 from ..processing.llm import LLMProcessor
 
 logger = logging.getLogger(__name__)
+
+LLM_MAX_RETRIES = 3
 
 
 def _chunk(items: list, size: int):
@@ -37,7 +39,7 @@ class Pipeline:
         sources = await queries.get_active_sources(self._db)
         for source in sources:
             try:
-                articles = await self._fetch_source(source)
+                articles = await self._fetch_with_retry(source)
                 stats["fetched"] += len(articles)
 
                 for article in articles:
@@ -70,6 +72,16 @@ class Pipeline:
         )
         return stats
 
+    async def _fetch_with_retry(self, source: dict, retries: int = 2):
+        for attempt in range(retries):
+            try:
+                return await self._fetch_source(source)
+            except Exception:
+                if attempt < retries - 1:
+                    await asyncio.sleep(5)
+                else:
+                    raise
+
     async def _fetch_source(self, source: dict):
         feed_type = source["feed_type"]
         if feed_type == "rss":
@@ -82,15 +94,7 @@ class Pipeline:
 
     async def _tier1_process(self, article, source: dict) -> bool:
         url_norm = normalize_url(article.url)
-
-        # Level 1: exact URL match
-        if await queries.url_exists(self._db, url_norm):
-            return False
-
-        # Level 2: content hash
         content_hash = compute_content_hash(article.title, article.content)
-        if await queries.hash_exists(self._db, content_hash):
-            return False
 
         # Score
         score = compute_score(
@@ -99,7 +103,7 @@ class Pipeline:
             config=self._config.scoring,
         )
 
-        # Insert
+        # Atomic INSERT OR IGNORE handles dedup
         result = await queries.insert_article(
             db=self._db,
             url=article.url,
@@ -137,10 +141,13 @@ class Pipeline:
                 max_tokens=self._config.llm.max_tokens_summarize,
             )
 
+            # Track which articles got results
+            matched_ids = set()
             for result in results:
                 idx = result["article_index"] - 1
                 if 0 <= idx < len(batch):
                     article = batch[idx]
+                    matched_ids.add(article["id"])
                     await queries.update_article_processed(
                         db=self._db,
                         article_id=article["id"],
@@ -150,6 +157,17 @@ class Pipeline:
                         title_ru=result.get("title_ru", ""),
                     )
                     total_processed += 1
+
+            # Handle articles that got no LLM result
+            for article in batch:
+                if article["id"] not in matched_ids:
+                    fail_count = await queries.increment_llm_fail(self._db, article["id"])
+                    if fail_count >= LLM_MAX_RETRIES:
+                        await queries.mark_article_llm_failed(self._db, article["id"])
+                        logger.warning(
+                            "Article %d marked as LLM-failed after %d attempts: %s",
+                            article["id"], fail_count, article.get("title", "")[:80],
+                        )
 
         return total_processed
 

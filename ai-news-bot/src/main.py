@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 from pathlib import Path
 
@@ -29,12 +30,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+_shutdown_event: asyncio.Event | None = None
+
 
 async def main() -> None:
+    global _shutdown_event
+    _shutdown_event = asyncio.Event()
+
     # Load config
     env = EnvSettings()
     config = load_yaml_config()
     logger.info("Config loaded: %d sources, %d tags", len(config.sources), len(config.tags))
+
+    # Validate config at startup
+    _validate_config(config)
 
     # Initialize database
     db_path = Path(__file__).parent.parent / "data" / "news.db"
@@ -64,9 +73,22 @@ async def main() -> None:
     # Start scheduler
     scheduler = setup_scheduler(
         db=db, bot=bot, pipeline=pipeline, llm=llm, config=config,
+        admin_id=env.admin_telegram_id,
     )
     scheduler.start()
     logger.info("Scheduler started")
+
+    # Setup graceful shutdown
+    def _signal_handler(*_):
+        logger.info("Shutdown signal received")
+        if _shutdown_event:
+            _shutdown_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            asyncio.get_running_loop().add_signal_handler(sig, _signal_handler)
+        except NotImplementedError:
+            signal.signal(sig, _signal_handler)
 
     # Start polling
     try:
@@ -83,6 +105,24 @@ async def main() -> None:
         await db.close()
         await bot.session.close()
         logger.info("Bot stopped")
+
+
+def _validate_config(config) -> None:
+    from urllib.parse import urlparse
+    errors = []
+    for source in config.sources:
+        parsed = urlparse(source.url)
+        if parsed.scheme not in ("http", "https"):
+            errors.append(f"Invalid URL scheme '{parsed.scheme}' for source '{source.name}'")
+        if not parsed.netloc:
+            errors.append(f"No host in URL for source '{source.name}'")
+
+    if errors:
+        for err in errors:
+            logger.error("Config validation: %s", err)
+        raise ValueError(f"Config validation failed: {len(errors)} errors")
+
+    logger.info("Config validation passed")
 
 
 def run() -> None:

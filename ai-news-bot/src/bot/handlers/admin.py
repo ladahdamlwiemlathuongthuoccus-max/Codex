@@ -14,14 +14,6 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-class AdminFilter:
-    def __init__(self, admin_id: int):
-        self._admin_id = admin_id
-
-    async def __call__(self, message: Message) -> bool:
-        return message.from_user and message.from_user.id == self._admin_id
-
-
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, db: Database, admin_id: int) -> None:
     if message.from_user.id != admin_id:
@@ -68,3 +60,25 @@ async def cmd_force_fetch(message: Message, db: Database, admin_id: int, pipelin
         text = f"Ошибка: {e}"
 
     await message.answer(text)
+
+
+@router.message(Command("health"))
+async def cmd_health(message: Message, db: Database, admin_id: int) -> None:
+    if message.from_user.id != admin_id:
+        await message.answer("Доступ только для администратора.")
+        return
+
+    health = await queries.get_health_status(db)
+
+    status = "OK" if (health["stuck_articles"] == 0 and health["stale_sources"] == 0) else "ISSUES"
+    text = (
+        f"<b>Health Check: {status}</b>\n\n"
+        f"Необработанных: {health['unprocessed']}\n"
+        f"Зависших (>6ч): {health['stuck_articles']}\n"
+        f"Источников без фетча: {health['stale_sources']}\n"
+        f"Источников с ошибками: {health['error_sources']}\n"
+        f"Обработано за 24ч: {health['processed_24h']}\n"
+        f"LLM-failed: {health['llm_failed']}\n"
+        f"Последний фетч: {health['last_fetch'] or 'никогда'}"
+    )
+    await message.answer(text, parse_mode="HTML")
