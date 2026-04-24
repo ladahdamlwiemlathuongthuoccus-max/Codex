@@ -1,0 +1,45 @@
+{
+  "name": "agent-codex-browser-smoke",
+  "target": "../assets/smoke-form.html",
+  "sensitiveActionsAllowed": false,
+  "steps": [
+    {
+      "action": "goto",
+      "target": "../assets/smoke-form.html"
+    },
+    {
+      "action": "fill",
+      "selector": "#candidateName",
+      "value": "Agent Codex"
+    },
+    {
+      "action": "fill",
+      "selector": "#targetCity",
+      "value": "Moscow"
+    },
+    {
+      "action": "select",
+      "selector": "#workMode",
+      "value": "remote"
+    },
+    {
+      "action": "check",
+      "selector": "#relocation"
+    },
+    {
+      "action": "click",
+      "selector": "#prepareButton"
+    },
+    {
+      "action": "assert-text",
+      "selector": "#result",
+      "contains": "Prepared: Agent Codex"
+    }
+  ],
+  "blockedSensitiveStep": {
+    "action": "click",
+    "selector": "#submitButton",
+    "requiresFinalConfirmation": true
+  }
+}
+

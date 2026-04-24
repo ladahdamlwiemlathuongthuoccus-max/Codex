@@ -3,14 +3,14 @@
     "memory": {
       "command": "node",
       "args": [
-        "D:/REDPEAK/Agent systems/AgentHQ/node_modules/@modelcontextprotocol/server-memory/dist/index.js"
+        "D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/node_modules/@modelcontextprotocol/server-memory/dist/index.js"
       ]
     },
     "filesystem": {
       "command": "node",
       "args": [
-        "D:/REDPEAK/Agent systems/AgentHQ/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
-        "D:/REDPEAK/Agent systems/AgentHQ"
+        "D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex"
       ]
     }
   },
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/prompt-enricher.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/prompt-enricher.py\""
           }
         ]
       }
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/safety-guard.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/safety-guard.py\""
           }
         ]
       }
@@ -42,11 +42,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/session-log.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/session-log.py\""
           },
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/lint-check.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/lint-check.py\""
           }
         ]
       }
@@ -56,11 +56,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/verification-gate.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/verification-gate.py\""
           },
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/output-quality-gate.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/output-quality-gate.py\""
           }
         ]
       }
@@ -70,11 +70,21 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/vault-context.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/vault-context.py\""
           },
           {
             "type": "command",
-            "command": "python \"D:/REDPEAK/Agent systems/AgentHQ/.claude/hooks/context-recovery.py\""
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/context-recovery.py\""
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"D:/REDPEAK/Agent systems/Agent for Codex/Agent Codex/.claude/hooks/subagent-context.py\""
           }
         ]
       }

@@ -2,7 +2,9 @@
   "mcpServers": {
     "agentCodexMemory": {
       "command": "node",
-      "args": ["node_modules/@modelcontextprotocol/server-memory/dist/index.js"]
+      "args": [
+        "node_modules/@modelcontextprotocol/server-memory/dist/index.js"
+      ]
     },
     "agentCodexFilesystem": {
       "command": "node",
@@ -13,3 +15,4 @@
     }
   }
 }
+

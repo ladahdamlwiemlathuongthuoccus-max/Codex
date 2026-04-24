@@ -1,0 +1,49 @@
+{
+  "cases": [
+    {
+      "id": "R-001",
+      "prompt": "Подготовь план недели и проверь дедлайны",
+      "expected": "operations-agent"
+    },
+    {
+      "id": "R-002",
+      "prompt": "Разбери NDA и выпиши риски по IP",
+      "expected": "legal-agent"
+    },
+    {
+      "id": "R-003",
+      "prompt": "Собери расходы по гранту ФСИ и остаток бюджета",
+      "expected": "accounting-agent"
+    },
+    {
+      "id": "R-004",
+      "prompt": "Что сейчас важнее: инвестор, ФСИ или разработка?",
+      "expected": "strategy-agent"
+    },
+    {
+      "id": "R-005",
+      "prompt": "Сделай .docx акт для подписи",
+      "expected": "documents"
+    },
+    {
+      "id": "R-006",
+      "prompt": "Открой сайт, заполни форму и сделай скриншот",
+      "expected": "browser"
+    },
+    {
+      "id": "R-007",
+      "prompt": "Почини баг, запусти тесты и покажи результат",
+      "expected": "engineering"
+    },
+    {
+      "id": "R-008",
+      "prompt": "Проверь итоговый отчёт с цифрами перед отправкой",
+      "expected": "evaluator-agent"
+    },
+    {
+      "id": "R-009",
+      "prompt": "Адаптируй MCP-интеграцию под Codex и OpenAI API",
+      "expected": "openai-codex"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Agent Codex Browser Smoke</title>
+</head>
+<body>
+  <main>
+    <h1>Agent Codex Browser Smoke</h1>
+    <form id="smokeForm">
+      <label>Имя <input id="candidateName" name="candidateName"></label>
+      <label>Город <input id="targetCity" name="targetCity"></label>
+      <label>Формат
+        <select id="workMode" name="workMode">
+          <option value="office">Офис</option>
+          <option value="remote">Удалённо</option>
+        </select>
+      </label>
+      <label><input id="relocation" type="checkbox"> Готов к релокации</label>
+      <button id="prepareButton" type="button">Prepare</button>
+      <button id="submitButton" type="submit" data-sensitive="true">Sensitive submit</button>
+    </form>
+    <pre id="result"></pre>
+  </main>
+  <script>
+    const result = document.getElementById("result");
+    document.getElementById("prepareButton").addEventListener("click", () => {
+      result.textContent = `Prepared: ${candidateName.value}; ${targetCity.value}; ${workMode.value}`;
+    });
+    document.getElementById("smokeForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      result.textContent = "Sensitive submit blocked in smoke mode";
+    });
+  </script>
+</body>
+</html>
+

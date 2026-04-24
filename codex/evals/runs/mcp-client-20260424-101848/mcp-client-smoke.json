@@ -1,0 +1,27 @@
+{
+  "root": "D:\\REDPEAK\\Agent systems\\Agent for Codex\\Agent Codex",
+  "reports": [
+    {
+      "name": "agentCodexMemory",
+      "status": "FAIL",
+      "error": "[WinError 5] Отказано в доступе"
+    },
+    {
+      "name": "agentCodexFilesystem",
+      "status": "FAIL",
+      "error": "[WinError 5] Отказано в доступе"
+    }
+  ],
+  "failures": [
+    {
+      "name": "agentCodexMemory",
+      "status": "FAIL",
+      "error": "[WinError 5] Отказано в доступе"
+    },
+    {
+      "name": "agentCodexFilesystem",
+      "status": "FAIL",
+      "error": "[WinError 5] Отказано в доступе"
+    }
+  ]
+}

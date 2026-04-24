@@ -1,0 +1,18 @@
+# Требует отдельного разрешения перед добавлением в C:\Users\sashatrash\.codex\config.toml
+
+[mcp_servers.agentCodexLocalControl]
+command = "powershell"
+args = [
+  "-NoProfile",
+  "-ExecutionPolicy",
+  "Bypass",
+  "-File",
+  "D:\\REDPEAK\\Agent systems\\Agent for Codex\\Agent Codex\\codex\\mcp\\local-control\\start-mcp.ps1"
+]
+env = { PYTHONUTF8 = "1" }
+
+[mcp_servers.agentCodexLocalControl.tools.list_windows]
+approval_mode = "approve"
+
+[mcp_servers.agentCodexLocalControl.tools.press_keys]
+approval_mode = "approve"

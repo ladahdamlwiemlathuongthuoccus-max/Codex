@@ -1,0 +1,14 @@
+[projects.'D:\REDPEAK\Agent systems\Agent for Codex\Agent Codex']
+trust_level = "trusted"
+
+[mcp_servers.agentCodexMemory]
+command = "node"
+args = ["D:\\REDPEAK\\Agent systems\\Agent for Codex\\Agent Codex\\node_modules\\@modelcontextprotocol\\server-memory\\dist\\index.js"]
+
+[mcp_servers.agentCodexFilesystem]
+command = "node"
+args = [
+  "D:\\REDPEAK\\Agent systems\\Agent for Codex\\Agent Codex\\node_modules\\@modelcontextprotocol\\server-filesystem\\dist\\index.js",
+  "D:\\REDPEAK\\Agent systems\\Agent for Codex\\Agent Codex"
+]
+
